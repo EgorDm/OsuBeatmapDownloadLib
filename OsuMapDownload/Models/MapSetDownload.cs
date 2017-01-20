@@ -174,7 +174,7 @@ namespace OsuMapDownload.Models
             }
             else
             {
-                Directory.Delete(destination);
+                Directory.Delete(destination, true);
             }
             //Extract into our path
             ZipFile.ExtractToDirectory($"{Path}/{Name}", destination);
