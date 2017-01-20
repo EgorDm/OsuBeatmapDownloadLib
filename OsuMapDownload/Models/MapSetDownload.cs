@@ -1,54 +1,59 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Net.Mime;
-using System.Text;
 using System.Threading.Tasks;
-using Microsoft.SqlServer.Server;
 
 namespace OsuMapDownload.Models
 {
     public class MapSetDownload
     {
         private Stopwatch _speedTracker { get; set; }
+
         /// <summary>
         /// Url of the download
         /// </summary>
         public string Url { get; set; }
+
         /// <summary>
         /// Location where the OSZ file should be downloaded to/temporarily saved.
         /// This does not include the file name
         /// </summary>
         public string Path { get; set; }
+
         /// <summary>
         /// File name to give the OSZ file. Note: this also includes the extension
         /// It can be left empty but if you are not using bloodcat there is a chance that the name would not me found
         /// </summary>
-        public string Name = null;
+        public string Name { get; set; }
+
         /// <summary>
         /// Are we done with downloading?
         /// </summary>
-        public bool Completed => Task != null && Task.IsCompleted;
+        public virtual bool Completed => Task != null && Task.IsCompleted;
+
         /// <summary>
         /// Has something happened with the download? Some kind of error or smt else
         /// </summary>
-        public bool Failed => Task != null && (Task.IsCanceled || Task.IsFaulted);
+        public virtual bool Failed => Task != null && (Task.IsCanceled || Task.IsFaulted);
+
         /// <summary>
         /// Has the map been succesfully extracted? If we didnt even start it will be always false
         /// </summary>
-        public bool Extracted { get; set; }
+        public virtual bool Extracted { get; set; }
+
         /// <summary>
         /// How far are we with download? In %
         /// </summary>
-        public float Progress { get; set; }
+        public virtual float Progress { get; set; }
+
         /// <summary>
         /// Download speed; In kb/s;
         /// </summary>
-        public float Speed { get; set; }
+        public virtual float Speed { get; set; }
+
         /// <summary>
         /// If the download has begun it will be set to an instance of task running. Not very interesting
         /// </summary>
@@ -133,9 +138,9 @@ namespace OsuMapDownload.Models
                 fileStream.Write(buffer, 0, bytesRead);
                 bytesDownloaded += bytesRead;
                 //Set progress. A percentage
-                Progress = bytesDownloaded/(float) fileSize*100f;//TODO: move into getters
+                Progress = bytesDownloaded/(float) fileSize*100f; //TODO: move into getters
                 // Calc dl speed in kb
-                Speed = bytesRead/(float) _speedTracker.Elapsed.Seconds;//TODO: is it even useful?
+                Speed = bytesRead/(float) _speedTracker.Elapsed.Seconds; //TODO: is it even useful?
             } while (bytesRead > 0);
             //Close the streams. We dont need them
             bodyStream.Close();
