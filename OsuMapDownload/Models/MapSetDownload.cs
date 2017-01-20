@@ -32,12 +32,12 @@ namespace OsuMapDownload.Models
         /// <summary>
         /// Are we done with downloading?
         /// </summary>
-        public virtual bool Completed => Task != null && Task.IsCompleted;
+        public virtual bool Completed { get; set; }
 
         /// <summary>
         /// Has something happened with the download? Some kind of error or smt else
         /// </summary>
-        public virtual bool Failed => Task != null && (Task.IsCanceled || Task.IsFaulted);
+        public virtual bool Failed { get; set; }
 
         /// <summary>
         /// Has the map been succesfully extracted? If we didnt even start it will be always false
@@ -79,7 +79,11 @@ namespace OsuMapDownload.Models
         /// <returns></returns>
         public Task CreateTask()
         {
-            Task = new Task(StartDownload);
+            Task = new Task(() =>
+            {
+                StartDownload();
+                if (!Failed) Completed = true;
+            });
             return Task;
         }
 
@@ -94,6 +98,7 @@ namespace OsuMapDownload.Models
             {
                 StartDownload();
                 Extract(songsPath);
+                if (!Failed) Completed = true;
             });
             return Task;
         }
@@ -107,61 +112,75 @@ namespace OsuMapDownload.Models
         /// </summary>
         public void StartDownload()
         {
-            //Start timer to use it in calculation of download speed
-            _speedTracker.Start();
-
-            //Debug.WriteLine($"Creating request for url {Url}");
-            //Create request
-            var request = WebRequest.Create(Url);
-            var response = request.GetResponse();
-
-            //If name is not set; check if it is set in header otherwise throw an error.
-            if (Name == null) Name = new ContentDisposition(response.Headers["Content-Disposition"]).FileName;
-
-            //Debug.WriteLine($"Creating osz at {Path}/{Name}");
-            //Create a stream to write a file
-            var fileStream = File.Create($"{Path}/{Name}");
-            //Create a stream to download a map
-            var bodyStream = response.GetResponseStream();
-            // Allocate 8k buffer
-            var buffer = new byte[8192];
-            // Get files initial size to calculate the progress
-            var fileSize = response.ContentLength;
-            // Will show how much bytes we downloaded in total
-            var bytesDownloaded = 0;
-            int bytesRead;
-            do
+            try
             {
-                // Read data up to 8k from stream
-                bytesRead = bodyStream.Read(buffer, 0, buffer.Length);
-                // Write it
-                fileStream.Write(buffer, 0, bytesRead);
-                bytesDownloaded += bytesRead;
-                //Set progress. A percentage
-                Progress = bytesDownloaded/(float) fileSize*100f; //TODO: move into getters
-                // Calc dl speed in kb
-                Speed = bytesRead/(float) _speedTracker.Elapsed.Seconds; //TODO: is it even useful?
-            } while (bytesRead > 0);
-            //Close the streams. We dont need them
-            bodyStream.Close();
-            fileStream.Close();
+                //Start timer to use it in calculation of download speed
+                _speedTracker.Start();
+
+                //Debug.WriteLine($"Creating request for url {Url}");
+                //Create request
+                var request = WebRequest.Create(Url);
+                var response = request.GetResponse();
+
+                //If name is not set; check if it is set in header otherwise throw an error.
+                if (Name == null) Name = new ContentDisposition(response.Headers["Content-Disposition"]).FileName;
+
+                //Debug.WriteLine($"Creating osz at {Path}/{Name}");
+                //Create a stream to write a file
+                var fileStream = File.Create($"{Path}/{Name}");
+                //Create a stream to download a map
+                var bodyStream = response.GetResponseStream();
+                // Allocate 8k buffer
+                var buffer = new byte[8192];
+                // Get files initial size to calculate the progress
+                var fileSize = response.ContentLength;
+                // Will show how much bytes we downloaded in total
+                var bytesDownloaded = 0;
+                int bytesRead;
+                do
+                {
+                    // Read data up to 8k from stream
+                    bytesRead = bodyStream.Read(buffer, 0, buffer.Length);
+                    // Write it
+                    fileStream.Write(buffer, 0, bytesRead);
+                    bytesDownloaded += bytesRead;
+                    //Set progress. A percentage
+                    Progress = bytesDownloaded/(float) fileSize*100f; //TODO: move into getters
+                    // Calc dl speed in kb
+                    Speed = bytesRead/(float) _speedTracker.Elapsed.Seconds; //TODO: is it even useful?
+                } while (bytesRead > 0);
+                //Close the streams. We dont need them
+                bodyStream.Close();
+                fileStream.Close();
+            }
+            catch (Exception e)
+            {
+                Failed = true;
+            }
         }
 
         public void Extract(string songsPath)
         {
-            //Check if path exists; If it does delete&overwrite; Remove the dots from dirname ofcourse. Osu does it too
-            var destination = $"{songsPath}/{MakeOsuFolderName(Name)}";
-            if (!Directory.Exists(destination))
+            try
             {
-                var di = Directory.CreateDirectory(destination);
+                //Check if path exists; If it does delete&overwrite; Remove the dots from dirname ofcourse. Osu does it too
+                var destination = $"{songsPath}/{MakeOsuFolderName(Name)}";
+                if (!Directory.Exists(destination))
+                {
+                    var di = Directory.CreateDirectory(destination);
+                }
+                else
+                {
+                    Directory.Delete(destination);
+                }
+                //Extract into our path
+                ZipFile.ExtractToDirectory($"{Path}/{Name}", destination);
+                Extracted = true;
             }
-            else
+            catch (Exception e)
             {
-                Directory.Delete(destination);
+                Failed = true;
             }
-            //Extract into our path
-            ZipFile.ExtractToDirectory($"{Path}/{Name}", destination);
-            Extracted = true;
         }
 
         /// <summary>
