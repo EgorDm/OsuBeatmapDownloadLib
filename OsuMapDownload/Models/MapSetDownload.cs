@@ -37,7 +37,7 @@ namespace OsuMapDownload.Models
         /// <summary>
         /// Has something happened with the download? Some kind of error or smt else
         /// </summary>
-        public virtual bool Failed => Task != null && (Task.IsCanceled || Task.IsFaulted);
+        public virtual bool Failed { get; set; }
 
         /// <summary>
         /// Has the map been succesfully extracted? If we didnt even start it will be always false
@@ -79,7 +79,17 @@ namespace OsuMapDownload.Models
         /// <returns></returns>
         public Task CreateTask()
         {
-            Task = new Task(StartDownload);
+            Task = new Task(() =>
+            {
+                try
+                {
+                    StartDownload();
+                }
+                catch (Exception e)
+                {
+                    Failed = true;
+                }
+            });
             return Task;
         }
 
@@ -92,8 +102,15 @@ namespace OsuMapDownload.Models
         {
             Task = new Task(() =>
             {
-                StartDownload();
-                Extract(songsPath);
+                try
+                {
+                    StartDownload();
+                    Extract(songsPath);
+                }
+                catch (Exception e)
+                {
+                    Failed = true;
+                }
             });
             return Task;
         }
