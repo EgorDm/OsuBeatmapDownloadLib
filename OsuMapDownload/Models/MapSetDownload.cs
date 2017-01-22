@@ -35,9 +35,14 @@ namespace OsuMapDownload.Models
         public virtual bool Completed => Task != null && Task.IsCompleted;
 
         /// <summary>
-        /// Has something happened with the download? Some kind of error or smt else
+        /// Has something happened with the download? If yes it will be set to an instance of the exception
         /// </summary>
-        public virtual bool Failed { get; set; }
+        public virtual Exception Error { get; set; }
+
+        // <summary>
+        /// Has something happened with the download?
+        /// </summary>
+        public virtual bool Failed => Error != null;
 
         /// <summary>
         /// Has the map been succesfully extracted? If we didnt even start it will be always false
@@ -87,7 +92,7 @@ namespace OsuMapDownload.Models
                 }
                 catch (Exception e)
                 {
-                    Failed = true;
+                    Error = e;
                 }
             });
             return Task;
@@ -109,7 +114,7 @@ namespace OsuMapDownload.Models
                 }
                 catch (Exception e)
                 {
-                    Failed = true;
+                    Error = e;
                 }
             });
             return Task;
