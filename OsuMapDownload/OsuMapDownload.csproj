@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Bloodcat.cs" />
+    <Compile Include="DownloadUtils.cs" />
     <Compile Include="Models\MapSetDownload.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

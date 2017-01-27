@@ -34,20 +34,30 @@ namespace UnitTestProject1
         [TestMethod]
         public void TestAsyncDownloadMultiple()
         {
+            DownloadUtils.SetThreadCountMax();
             var download = new MapSetDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
             var task = download.CreateTask(SONGS_PATH);
             var download2 = new MapSetDownload("http://bloodcat.com/osu/s/553711", TEMP_PATH);
             var task2 = download2.CreateTask(SONGS_PATH);
+            var download3 = new MapSetDownload("http://bloodcat.com/osu/s/483147", TEMP_PATH);
+            var task3 = download3.CreateTask(SONGS_PATH);
             task.Start();
             task2.Start();
-            while (!task.IsCompleted || !task.IsCompleted)
+            task3.Start();
+            while (!task.IsCompleted || !task2.IsCompleted || !task3.IsCompleted)
             {
                 Debug.WriteLine($"Download 1 - Progress: {download.Progress} Speed: {download.Speed} kb/s");
                 Debug.WriteLine($"Download 2 - Progress: {download2.Progress} Speed: {download2.Speed} kb/s");
+                Debug.WriteLine($"Download 3 - Progress: {download3.Progress} Speed: {download3.Speed} kb/s");
                 Thread.Sleep(100);
+            }
+            if (download.Failed)
+            {
+                Debug.WriteLine(download.Error.ToString());
             }
             Debug.WriteLine($"Download 1 Completed: {download.Completed} or Failed: {download.Failed}");
             Debug.WriteLine($"Download 2 Completed: {download2.Completed} or Failed: {download2.Failed}");
+            Debug.WriteLine($"Download 3 Completed: {download3.Completed} or Failed: {download3.Failed}");
         }
 
     }
