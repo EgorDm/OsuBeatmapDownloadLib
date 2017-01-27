@@ -20,7 +20,7 @@ namespace UnitTestProject1
         public void TestAsyncDownload()
         {
             var download = new MapSetDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
-            var task = download.CreateTask(SONGS_PATH);
+            var task = download.CreateTask();
             task.Start();
             while (!task.IsCompleted)
             {
@@ -36,11 +36,11 @@ namespace UnitTestProject1
         {
             DownloadUtils.SetThreadCountMax();
             var download = new MapSetDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
-            var task = download.CreateTask(SONGS_PATH);
+            var task = download.CreateTask();
             var download2 = new MapSetDownload("http://bloodcat.com/osu/s/553711", TEMP_PATH);
-            var task2 = download2.CreateTask(SONGS_PATH);
+            var task2 = download2.CreateTask();
             var download3 = new MapSetDownload("http://bloodcat.com/osu/s/483147", TEMP_PATH);
-            var task3 = download3.CreateTask(SONGS_PATH);
+            var task3 = download3.CreateTask();
             task.Start();
             task2.Start();
             task3.Start();
@@ -58,6 +58,29 @@ namespace UnitTestProject1
             Debug.WriteLine($"Download 1 Completed: {download.Completed} or Failed: {download.Failed}");
             Debug.WriteLine($"Download 2 Completed: {download2.Completed} or Failed: {download2.Failed}");
             Debug.WriteLine($"Download 3 Completed: {download3.Completed} or Failed: {download3.Failed}");
+        }
+
+        [TestMethod]
+        public void TestAsyncDownloadExtract()
+        {
+            var download = new MapSetExtractDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
+            var task = download.CreateTask();
+            task.Start();
+            while (!task.IsCompleted)
+            {
+                Debug.WriteLine(download.Progress + " with speed " + download.Speed);
+                Thread.Sleep(100);
+            }
+            Debug.WriteLine(download.Completed);
+            Debug.WriteLine(download.Failed);
+            if (download.Completed && download.Extracted)
+            {
+                Debug.WriteLine("Map hashes");
+                foreach (var hash in download.MapHashes)
+                {
+                    Debug.WriteLine(hash);
+                }
+            }
         }
 
     }
