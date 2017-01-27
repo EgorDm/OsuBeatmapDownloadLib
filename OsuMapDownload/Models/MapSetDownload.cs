@@ -10,7 +10,7 @@ namespace OsuMapDownload.Models
 {
     public class MapSetDownload
     {
-        private Stopwatch _speedTracker { get; set; }
+        protected Stopwatch _speedTracker { get; set; }
 
         /// <summary>
         /// Url of the download
@@ -39,15 +39,10 @@ namespace OsuMapDownload.Models
         /// </summary>
         public virtual Exception Error { get; set; }
 
-        // <summary>
+        /// <summary>
         /// Has something happened with the download?
         /// </summary>
         public virtual bool Failed => Error != null;
-
-        /// <summary>
-        /// Has the map been succesfully extracted? If we didnt even start it will be always false
-        /// </summary>
-        public virtual bool Extracted { get; set; }
 
         /// <summary>
         /// How far are we with download? In %
@@ -62,7 +57,7 @@ namespace OsuMapDownload.Models
         /// <summary>
         /// If the download has begun it will be set to an instance of task running. Not very interesting
         /// </summary>
-        public Task Task { get; private set; }
+        public Task Task { get; protected set; }
 
         /// <summary>
         /// Create the download model; Has to be started with CreateTask().Start()
@@ -82,35 +77,13 @@ namespace OsuMapDownload.Models
         /// Create task which should be run async to ONLY download
         /// </summary>
         /// <returns></returns>
-        public Task CreateTask()
+        public virtual Task CreateTask()
         {
             Task = new Task(() =>
             {
                 try
                 {
                     StartDownload();
-                }
-                catch (Exception e)
-                {
-                    Error = e;
-                }
-            });
-            return Task;
-        }
-
-        /// <summary>
-        /// Create task which should be run async to download and EXTRACT the beatmap
-        /// </summary>
-        /// <param name="songsPath">Osu songs folder. Folder where the map should be extracted</param>
-        /// <returns></returns>
-        public Task CreateTask(string songsPath)
-        {
-            Task = new Task(() =>
-            {
-                try
-                {
-                    StartDownload();
-                    Extract(songsPath);
                 }
                 catch (Exception e)
                 {
@@ -127,7 +100,7 @@ namespace OsuMapDownload.Models
         /// 
         /// If you are running this not ascync you have to catch the exceptions yourself ¯\_(ツ)_/¯ 
         /// </summary>
-        public void StartDownload()
+        public virtual void StartDownload()
         {
             //Start timer to use it in calculation of download speed
             _speedTracker.Start();
@@ -142,10 +115,7 @@ namespace OsuMapDownload.Models
 
             //Debug.WriteLine($"Creating osz at {Path}/{Name}");
             //Create a stream to write a file. If path does not exists; Create it.
-            if (!Directory.Exists(Path))
-            {
-                var di = Directory.CreateDirectory(Path);
-            }
+            if (!Directory.Exists(Path)) Directory.CreateDirectory(Path);
             using (var fileStream = File.Create($"{Path}/{Name}"))
             {
                 //Create a stream to download a map
@@ -173,23 +143,6 @@ namespace OsuMapDownload.Models
                     //Close the streams. We dont need them
                 }
             }
-        }
-
-        public void Extract(string songsPath)
-        {
-            //Check if path exists; If it does delete&overwrite; Remove the dots from dirname ofcourse. Osu does it too
-            var destination = $"{songsPath}/{MakeOsuFolderName(Name)}";
-            if (!Directory.Exists(destination))
-            {
-                var di = Directory.CreateDirectory(destination);
-            }
-            else
-            {
-                Directory.Delete(destination, true);
-            }
-            //Extract into our path
-            ZipFile.ExtractToDirectory($"{Path}/{Name}", destination);
-            Extracted = true;
         }
 
         /// <summary>

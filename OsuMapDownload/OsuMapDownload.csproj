@@ -45,6 +45,7 @@
     <Compile Include="Bloodcat.cs" />
     <Compile Include="DownloadUtils.cs" />
     <Compile Include="Models\MapSetDownload.cs" />
+    <Compile Include="Models\MapSetExtractDownload.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
