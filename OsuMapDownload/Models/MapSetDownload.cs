@@ -143,6 +143,16 @@ namespace OsuMapDownload.Models
                     //Close the streams. We dont need them
                 }
             }
+            AfterComplete();
+        }
+        
+        /// <summary>
+        /// Run right after StartDownloaded and in the same thread.
+        /// Override this if you need to do something after download completes. Like moving or processing the file.
+        /// </summary>
+        public virtual void AfterComplete()
+        {
+            
         }
 
         /// <summary>

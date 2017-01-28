@@ -22,32 +22,10 @@ namespace OsuMapDownload.Models
         }
 
         /// <summary>
-        /// Create task which should be run async to download and read map as zip.
-        /// There it grabs the md5 of the .osu file. This can be used in collections
-        /// </summary>
-        /// <returns></returns>
-        public override Task CreateTask()
-        {
-            Task = new Task(() =>
-            {
-                try
-                {
-                    StartDownload();
-                    Extract();
-                }
-                catch (Exception e)
-                {
-                    Error = e;
-                }
-            });
-            return Task;
-        }
-
-        /// <summary>
         /// Reads osz file as zip and loops through all the .osu files to get their hash
         /// hashes can be found in MapHashes property
         /// </summary>
-        public void Extract()
+        public virtual void Extract()
         {
             //Path to osz
             var path = $"{Path}/{Name}";
@@ -65,6 +43,12 @@ namespace OsuMapDownload.Models
                     }
                 }
             }
+        }
+
+        public override void AfterComplete()
+        {
+            base.AfterComplete();
+            Extract();
         }
     }
 }
