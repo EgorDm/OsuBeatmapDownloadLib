@@ -5,7 +5,10 @@ using System.Linq;
 using System.Net;
 using System.Security.Policy;
 using System.Text;
+using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using OsuMapDownload.Models;
+using OsuMapDownload.Providers;
 
 namespace UnitTestProject1
 {
@@ -17,15 +20,15 @@ namespace UnitTestProject1
         public const string OSU_DOWNLOAD_URL = "https://osu.ppy.sh/d/{0}n";
         public const string OSU_LOGIN_URL = "https://osu.ppy.sh/forum/ucp.php?mode=login";
 
-        private const string USERNAME = "test";
-        private const string PASSWORD = "test!!";
+        public const string USERNAME = "test";
+        public const string PASSWORD = "test";
 
         private const string NOT_LOGGED_IN_CHECK = "action=\"https://osu.ppy.sh/forum/ucp.php?mode=login\"";
         private const string LOGIN_FAILED_CHECK = "class=\"error\"";
         private static readonly CookieContainer COOKIE_CONTAINER = new CookieContainer();
 
 
-        [TestMethod]
+        //[TestMethod]
         public void TestDownloadFromOsu()
         {
            Debug.WriteLine("Checking login");

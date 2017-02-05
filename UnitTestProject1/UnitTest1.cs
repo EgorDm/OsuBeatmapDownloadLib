@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OsuMapDownload;
 using OsuMapDownload.Models;
+using OsuMapDownload.Providers;
 
 namespace UnitTestProject1
 {
@@ -14,74 +15,96 @@ namespace UnitTestProject1
     public class UnitTest1
     {
         private const string SONGS_PATH = @"G:\Games\OsuTest\Songs";
-        private const string TEMP_PATH = @"G:\Games\OsuTest\TempDL";
+        public const string TEMP_PATH = @"G:\Games\OsuTest\LibTempDL";
 
         [TestMethod]
-        public void TestAsyncDownload()
-        {
-            var download = new MapSetDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
-            var task = download.CreateTask();
-            task.Start();
-            while (!task.IsCompleted)
-            {
-                Debug.WriteLine(download.Progress + " with speed " + download.Speed);
-                Thread.Sleep(100);
-            }
-            Debug.WriteLine(download.Completed);
-            Debug.WriteLine(download.Failed);
+        public void TestDownloadBloodcat() {
+            TestDownloadOne(new B1oodcatDownloadProvider());
         }
 
         [TestMethod]
-        public void TestAsyncDownloadMultiple()
-        {
+        public void TestDownloadOsu() {
+            TestDownloadOne(new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD));
+        }
+
+        public void TestDownloadOne(BeatmapDownloadProvider provider) {
+            var download = new MapsetDownload(138554, UnitTest1.TEMP_PATH,
+                provider);
+            download.Start();
+            while (download.Status != MapsetDownloadStatus.Completed && download.Status != MapsetDownloadStatus.Failed) {
+                Debug.WriteLine(download.Progress + " with speed " + download.Speed);
+                Thread.Sleep(100);
+            }
+            Debug.WriteLine("Download is: " + download.Status);
+            if (download.Status == MapsetDownloadStatus.Failed) {
+                Debug.WriteLine("Exception " + download.Error.ToString());
+            }
+        }
+        
+        [TestMethod]
+        public void TestDownloadMultipleBloodcat() {
+            TestDownloadMultiple(new B1oodcatDownloadProvider());
+        }
+        
+        [TestMethod]
+        public void TestDownloadMultipleOsu() {
+            TestDownloadMultiple(new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD));
+        }
+
+        public void TestDownloadMultiple(BeatmapDownloadProvider provider) {
             DownloadUtils.SetThreadCountMax();
-            var download = new MapSetDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
-            var task = download.CreateTask();
-            var download2 = new MapSetDownload("http://bloodcat.com/osu/s/553711", TEMP_PATH);
-            var task2 = download2.CreateTask();
-            var download3 = new MapSetDownload("http://bloodcat.com/osu/s/483147", TEMP_PATH);
-            var task3 = download3.CreateTask();
-            task.Start();
-            task2.Start();
-            task3.Start();
-            while (!task.IsCompleted || !task2.IsCompleted || !task3.IsCompleted)
-            {
-                Debug.WriteLine($"Download 1 - Progress: {download.Progress} Speed: {download.Speed} kb/s");
-                Debug.WriteLine($"Download 2 - Progress: {download2.Progress} Speed: {download2.Speed} kb/s");
-                Debug.WriteLine($"Download 3 - Progress: {download3.Progress} Speed: {download3.Speed} kb/s");
+            var downloads = new[] {
+                new MapsetDownload(138554, TEMP_PATH, provider),
+                new MapsetDownload(553711, TEMP_PATH, provider),
+                new MapsetDownload(483147, TEMP_PATH, provider),
+            };
+            foreach (var mapsetDownload in downloads) {
+                mapsetDownload.Start();
+            }
+            var finished = false;
+            while (!finished) {
+                finished = true;
+                for (var i = 0; i < downloads.Length; i++) {
+                    Debug.WriteLine($"Download {i} - Progress: {downloads[i].Progress} Speed: {downloads[i].Speed} kb/s");
+                    if (finished) finished = downloads[i].Completed;
+                }
                 Thread.Sleep(100);
             }
-            if (download.Failed)
-            {
-                Debug.WriteLine(download.Error.ToString());
-            }
-            Debug.WriteLine($"Download 1 Completed: {download.Completed} or Failed: {download.Failed}");
-            Debug.WriteLine($"Download 2 Completed: {download2.Completed} or Failed: {download2.Failed}");
-            Debug.WriteLine($"Download 3 Completed: {download3.Completed} or Failed: {download3.Failed}");
-        }
-
-        [TestMethod]
-        public void TestAsyncDownloadExtract()
-        {
-            var download = new MapSetExtractDownload("http://bloodcat.com/osu/s/138554", TEMP_PATH);
-            var task = download.CreateTask();
-            task.Start();
-            while (!task.IsCompleted)
-            {
-                Debug.WriteLine(download.Progress + " with speed " + download.Speed);
-                Thread.Sleep(100);
-            }
-            Debug.WriteLine(download.Completed);
-            Debug.WriteLine(download.Failed);
-            if (download.Completed && download.Extracted)
-            {
-                Debug.WriteLine("Map hashes");
-                foreach (var hash in download.MapHashes)
-                {
-                    Debug.WriteLine(hash);
+            for (var i = 0; i < downloads.Length; i++) {
+                Debug.WriteLine($"Download {i} Status: {downloads[i].Status}");
+                if (downloads[i].Status == MapsetDownloadStatus.Failed) {
+                    Debug.WriteLine("Exception " + downloads[i].Error.ToString());
                 }
             }
         }
 
+        [TestMethod]
+        public void TestDownloadExtractBloodcat() {
+            TestDownloadExtract(new B1oodcatDownloadProvider());
+        }
+
+        [TestMethod]
+        public void TestDownloadExtractOsu() {
+            TestDownloadExtract(new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD));
+        }
+
+        public void TestDownloadExtract(BeatmapDownloadProvider provider) {
+            var download = new MapsetExtractDownload(138554, UnitTest1.TEMP_PATH, provider);
+            download.Start();
+            while (download.Status != MapsetDownloadStatus.Completed && download.Status != MapsetDownloadStatus.Failed) {
+                Debug.WriteLine(download.Progress + " with speed " + download.Speed);
+                Thread.Sleep(100);
+            }
+            Debug.WriteLine("Download is: " + download.Status);
+            if (download.Status == MapsetDownloadStatus.Failed) {
+                Debug.WriteLine("Exception " + download.Error.ToString());
+            }
+            if (download.Completed && download.Status != MapsetDownloadStatus.Failed) {
+                Debug.WriteLine("Map hashes");
+                foreach (var hash in download.MapHashes) {
+                    Debug.WriteLine(hash);
+                }
+            }
+        }
     }
 }
