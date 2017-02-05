@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -72,6 +73,32 @@ namespace OsuMapDownload
                 filename = filename.Replace(c.ToString(), "");
             }
             return filename;
+        }
+
+        public static void SerializeCookies(CookieCollection cookies, Uri address, Stream stream) {
+            var formatter = new DataContractSerializer(typeof(List<Cookie>));
+            var cookieList = new List<Cookie>();
+            for (var enumerator = cookies.GetEnumerator(); enumerator.MoveNext();) {
+                var cookie = enumerator.Current as Cookie;
+                if (cookie == null) continue;
+                cookieList.Add(cookie);
+
+            }
+            formatter.WriteObject(stream, cookieList);
+        }
+
+        public static CookieContainer DeserializeCookies(Stream stream, Uri uri) {
+            var cookies = new List<Cookie>();
+            var container = new CookieContainer();
+            var formatter = new DataContractSerializer(typeof(List<Cookie>));
+            cookies = (List<Cookie>)formatter.ReadObject(stream);
+            var cookieco = new CookieCollection();
+
+            foreach (var cookie in cookies) {
+                cookieco.Add(cookie);
+            }
+            container.Add(uri, cookieco);
+            return container;
         }
     }
 }

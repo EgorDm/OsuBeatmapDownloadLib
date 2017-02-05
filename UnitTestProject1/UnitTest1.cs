@@ -106,5 +106,44 @@ namespace UnitTestProject1
                 }
             }
         }
+
+        [TestMethod]
+        public void WriteCookies() {
+            var provider = new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD);
+            provider.CheckOrLogin();
+            while (provider.LoginTask != null) {
+                Thread.Sleep(100);
+            }
+            if (!provider.LoggedIn) {
+                Debug.WriteLine("Failed. We are not logged in.");
+                return;
+            }
+            var path = $"{TEMP_PATH}/cookies.txt";
+            var uri = new Uri(OsuDownloadProvider.BASE_URL);
+            Debug.WriteLine("Writing to " + path);
+            using (var fs = new FileStream(path, FileMode.Create)) {
+                DownloadUtils.SerializeCookies(provider.Cookies.GetCookies(uri), uri, fs);
+            }
+        }
+
+        [TestMethod]
+        public void ReadCookies() {
+            var path = $"{TEMP_PATH}/cookies.txt";
+            var uri = new Uri(OsuDownloadProvider.BASE_URL);
+            CookieContainer container;
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read)) {
+                container = DownloadUtils.DeserializeCookies(fs, uri);
+            }
+            var provider = new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD, container);
+            provider.CheckOrLogin();
+            while (provider.LoginTask != null) {
+                Thread.Sleep(100);
+            }
+            if (!provider.LoggedIn) {
+                Debug.WriteLine("We are not logged in.");
+            } else {
+                Debug.WriteLine("We are logged in!");
+            }
+        }
     }
 }
