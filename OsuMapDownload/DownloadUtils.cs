@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -43,6 +45,33 @@ namespace OsuMapDownload
             {
                 return BitConverter.ToString(md5.ComputeHash(stream)).Replace("-", string.Empty).ToLower();
             }
+        }
+
+        public static bool ResponseContains(WebResponse haystack, string needle)
+        {
+            using (var responseStream = haystack.GetResponseStream())
+            {
+                if (responseStream == null) return false;
+                using (var reader = new StreamReader(responseStream))
+                {
+                    var responseText = reader.ReadToEnd();
+                    //Debug.WriteLine(responseText);
+                    return responseText.Contains(needle);
+                }
+            }
+        }
+
+        public static void CheckCreateDir(string directory) {
+            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+        }
+
+        public static string RemoveIllegalCharacters(string filename) {
+            filename = filename.Replace('*', '-');
+            var invalid = new string(Path.GetInvalidFileNameChars());
+            foreach (var c in invalid) {
+                filename = filename.Replace(c.ToString(), "");
+            }
+            return filename;
         }
     }
 }

@@ -1,168 +1,128 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
+using System.Linq;
 using System.Net;
-using System.Net.Mime;
+using System.Text;
 using System.Threading.Tasks;
+using OsuMapDownload.Exceptions;
 
 namespace OsuMapDownload.Models
 {
-    public class MapSetDownload
+    public enum MapsetDownloadStatus
     {
-        protected Stopwatch _speedTracker { get; set; }
+        Waiting,
+        Downloading,
+        Extracting,
+        Completed,
+        Failed
+    }
 
-        /// <summary>
-        /// Url of the download
-        /// </summary>
-        public string Url { get; set; }
+    public class MapsetDownload
+    {
+        private Exception _error;
 
-        /// <summary>
-        /// Location where the OSZ file should be downloaded to/temporarily saved.
-        /// This does not include the file name
-        /// </summary>
+        public int ID { get; set; }
         public string Path { get; set; }
+        public virtual MapsetDownloadStatus Status { get; set; } = MapsetDownloadStatus.Waiting;
+        public virtual float Progress { get; protected set; }
+        public virtual float Speed { get; protected set; }
+        public BeatmapDownloadProvider DownloadProvider { get; protected set; }
+        protected string FileName { get; set; }
 
-        /// <summary>
-        /// File name to give the OSZ file. Note: this also includes the extension
-        /// It can be left empty but if you are not using bloodcat there is a chance that the name would not me found
-        /// </summary>
-        public string Name { get; set; }
+        //One bool to rule them all
+        public bool Completed => Status == MapsetDownloadStatus.Completed || Status == MapsetDownloadStatus.Failed;
 
-        /// <summary>
-        /// Are we done with downloading?
-        /// </summary>
-        public virtual bool Completed => Task != null && Task.IsCompleted;
-
-        /// <summary>
-        /// Has something happened with the download? If yes it will be set to an instance of the exception
-        /// </summary>
-        public virtual Exception Error { get; set; }
-
-        /// <summary>
-        /// Has something happened with the download?
-        /// </summary>
-        public virtual bool Failed => Error != null;
-
-        /// <summary>
-        /// How far are we with download? In %
-        /// </summary>
-        public virtual float Progress { get; set; }
-
-        /// <summary>
-        /// Download speed; In kb/s;
-        /// </summary>
-        public virtual float Speed { get; set; }
-
-        /// <summary>
-        /// If the download has begun it will be set to an instance of task running. Not very interesting
-        /// </summary>
-        public Task Task { get; protected set; }
-
-        /// <summary>
-        /// Create the download model; Has to be started with CreateTask().Start()
-        /// </summary>
-        /// <param name="url">Download url</param>
-        /// <param name="path">Path osz will temporarily placed in</param>
-        /// <param name="name">Name of the file. Can be left empty.</param>
-        public MapSetDownload(string url, string path, string name = null)
-        {
-            _speedTracker = new Stopwatch();
-            Url = url;
-            Path = path;
-            Name = name;
+        public virtual Exception Error {
+            get { return _error; }
+            set {
+                _error = value;
+                Status = MapsetDownloadStatus.Failed;
+            }
         }
 
-        /// <summary>
-        /// Create task which should be run async to ONLY download
-        /// </summary>
-        /// <returns></returns>
-        public virtual Task CreateTask()
-        {
-            Task = new Task(() =>
-            {
-                try
-                {
-                    StartDownload();
-                }
-                catch (Exception e)
-                {
+        public MapsetDownload(int id, string path, BeatmapDownloadProvider provider) {
+            ID = id;
+            Path = path;
+            DownloadProvider = provider;
+        }
+
+        public virtual Task Start() {
+            var task = GetTask();
+            DownloadProvider.StartDownloadTask(task, this);
+            return task;
+        }
+
+        public virtual Task GetTask() {
+            return new Task(() => {
+                try {
+                    Download();
+                } catch (Exception e) {
                     Error = e;
                 }
             });
-            return Task;
         }
 
-        /// <summary>
-        /// Downloads a map to the path with given name. If name is not set it will try to figure out its original name which is SOMETIMES set in headers.
-        /// This method will start download sinchronized with current thread. So it is adviced to use CreateTask method to run it async.
-        /// If download fails parameter Failed will be set to true otherwise Completed will be true.
-        /// 
-        /// If you are running this not ascync you have to catch the exceptions yourself ¯\_(ツ)_/¯ 
-        /// </summary>
-        public virtual void StartDownload()
-        {
-            //Start timer to use it in calculation of download speed
-            _speedTracker.Start();
+        protected virtual void BeforeDownload() {}
 
-            //Debug.WriteLine($"Creating request for url {Url}");
-            //Create request
-            var request = WebRequest.Create(Url);
+        protected virtual void Download() {
+            Status = MapsetDownloadStatus.Downloading;
+            BeforeDownload();
+
+            var speedTracker = new Stopwatch();
+            speedTracker.Start();
+
+            var request = DownloadProvider.PrepareRequest(this);
             var response = request.GetResponse();
-
-            //If name is not set; check if it is set in header otherwise throw an error.
-            if (Name == null) Name = new ContentDisposition(response.Headers["Content-Disposition"]).FileName;
-
-            //Debug.WriteLine($"Creating osz at {Path}/{Name}");
-            //Create a stream to write a file. If path does not exists; Create it.
-            if (!Directory.Exists(Path)) Directory.CreateDirectory(Path);
-            using (var fileStream = File.Create($"{Path}/{Name}"))
-            {
-                //Create a stream to download a map
-                using (var bodyStream = response.GetResponseStream())
-                {
-                    // Allocate 8k buffer
-                    var buffer = new byte[8192];
-                    // Get files initial size to calculate the progress
-                    var fileSize = response.ContentLength;
-                    // Will show how much bytes we downloaded in total
-                    var bytesDownloaded = 0;
-                    int bytesRead;
-                    do
-                    {
-                        // Read data up to 8k from stream
-                        bytesRead = bodyStream.Read(buffer, 0, buffer.Length);
-                        // Write it
-                        fileStream.Write(buffer, 0, bytesRead);
-                        bytesDownloaded += bytesRead;
-                        //Set progress. A percentage
-                        Progress = bytesDownloaded/(float) fileSize*100f; //TODO: move into getters
-                        // Calc dl speed in kb
-                        Speed = bytesRead/(float) _speedTracker.Elapsed.Seconds; //TODO: is it even useful?
-                    } while (bytesRead > 0);
-                    //Close the streams. We dont need them
-                }
+            try {
+                FileName = DownloadUtils.RemoveIllegalCharacters(DownloadProvider.GetFileName(response));
+            } catch (Exception) {
+                throw new MapsetNotFoundException(request.RequestUri.AbsoluteUri);
             }
-            AfterComplete();
-        }
-        
-        /// <summary>
-        /// Run right after StartDownloaded and in the same thread.
-        /// Override this if you need to do something after download completes. Like moving or processing the file.
-        /// </summary>
-        public virtual void AfterComplete()
-        {
-            
+
+            DownloadUtils.CheckCreateDir(Path);
+            try {
+                using (var fileStream = File.Create($"{Path}/{FileName}")) {
+                    using (var bodyStream = response.GetResponseStream()) {
+                        // Allocate 8k buffer
+                        var buffer = new byte[8192];
+                        // Get files initial size to calculate the progress
+                        var fileSize = response.ContentLength;
+                        // Will show how much bytes we downloaded in total
+                        var bytesDownloaded = 0;
+                        int bytesRead;
+                        do {
+                            // Read data up to 8k from stream
+                            bytesRead = bodyStream.Read(buffer, 0, buffer.Length);
+                            // Write it
+                            fileStream.Write(buffer, 0, bytesRead);
+                            bytesDownloaded += bytesRead;
+                            //Set progress. A percentage
+                            Progress = bytesDownloaded/(float) fileSize;
+                            // Calc dl speed in kb
+                            Speed = bytesRead/(float) speedTracker.Elapsed.Seconds;
+                        } while (bytesRead > 0);
+                        //Close the streams. We dont need them
+                    }
+                }
+            } catch (Exception e) {
+                speedTracker.Stop();
+                throw new MapsetDownloadInterrupedException(e);
+            }
+
+            AfterDownload();
+            Status = MapsetDownloadStatus.Completed;
         }
 
-        /// <summary>
-        /// Removes the extension and all the dots from osz file name.
-        /// </summary>
-        /// <param name="originalOsz"></param>
-        /// <returns></returns>
-        public static string MakeOsuFolderName(string originalOsz)
-        {
-            return originalOsz.Remove(originalOsz.LastIndexOf(".", StringComparison.Ordinal)).Replace(".", "");
+        protected virtual void AfterDownload() {}
+
+        public virtual void Reset(BeatmapDownloadProvider provider) {
+            DownloadProvider = provider;
+            Status = MapsetDownloadStatus.Waiting;
+            Error = null;
+            Progress = 0;
+            Speed = 0;
         }
     }
 }

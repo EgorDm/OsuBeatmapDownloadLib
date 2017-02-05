@@ -42,11 +42,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exceptions\DownloadProviderNotReadyException.cs" />
+    <Compile Include="Exceptions\MapsetDownloadInterrupedException.cs" />
+    <Compile Include="Exceptions\MapsetNotFoundException.cs" />
+    <Compile Include="Models\MapsetDownload.cs" />
+    <Compile Include="Models\MapsetExtractDownload.cs" />
+    <Compile Include="Providers\B1oodcatDownloadProvider.cs" />
+    <Compile Include="Providers\BeatmapDownloadProvider.cs" />
     <Compile Include="Bloodcat.cs" />
     <Compile Include="DownloadUtils.cs" />
-    <Compile Include="Models\MapSetDownload.cs" />
-    <Compile Include="Models\MapSetExtractDownload.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Providers\OsuDownloadProvider.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
