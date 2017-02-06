@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using OsuMapDownload.Exceptions;
 using OsuMapDownload.Models;
@@ -23,6 +25,7 @@ namespace OsuMapDownload.Providers
         private string _username;
         private string _password;
 
+        public string CookieFilePath { get; set; }
         public CookieContainer Cookies { get; private set; } = new CookieContainer();
         public List<Action<bool>> LoginCallback = new List<Action<bool>>();
         public Task LoginTask;
@@ -39,16 +42,21 @@ namespace OsuMapDownload.Providers
             }
         }
 
-        public OsuDownloadProvider(string username, string password, CookieContainer cookies) {
+        public OsuDownloadProvider(string username, string password, CookieContainer cookies, string cookieFilePath = null) {
             _username = username;
             _password = password;
-            Cookies = cookies;
+            CookieFilePath = cookieFilePath;
+            if (cookies != null) {
+                Cookies = cookies;
+                return;
+            }
+            if (cookieFilePath != null) {
+                LoadCookies();
+            }
         }
 
-        public OsuDownloadProvider(string username, string password) {
-            _username = username;
-            _password = password;
-        }
+        public OsuDownloadProvider(string username, string password, string cookiePath = null)
+            : this(username, password, null, cookiePath) {}
 
         public override string GetUrl(MapsetDownload download) {
             return string.Format(BASE_URL + DOWNLOAD_URL, download.ID);
@@ -71,7 +79,7 @@ namespace OsuMapDownload.Providers
             }
             Debug.WriteLine("StartingDL");
             LoginCallback.Add(loggedIn => {
-                Debug.WriteLine("LoginCB"+loggedIn);
+                Debug.WriteLine("LoginCB" + loggedIn);
                 if (loggedIn) {
                     downloadTask.Start();
                 } else {
@@ -80,7 +88,6 @@ namespace OsuMapDownload.Providers
             });
             if (LoginTask == null) {
                 CheckOrLogin();
-                
             }
         }
 
@@ -93,14 +100,13 @@ namespace OsuMapDownload.Providers
                         loggedIn = Login(_username, _password);
                     }
                 } catch (Exception) {
-                   // throw;
+                    // throw;
                 }
                 LoggedIn = loggedIn;
                 LoginTask = null;
             });
             LoginTask.Start();
         }
-
 
         protected bool CheckLoggedIn() {
             var webRequest = (HttpWebRequest) WebRequest.Create(BASE_URL);
@@ -125,7 +131,26 @@ namespace OsuMapDownload.Providers
                 writer.Write(postdata, 0, postdata.Length);
             }
             var webResponse = (HttpWebResponse) webRequest.GetResponse();
-            return !DownloadUtils.ResponseContains(webResponse, LOGIN_FAILED_CHECK);
+            var ret = !DownloadUtils.ResponseContains(webResponse, LOGIN_FAILED_CHECK);
+            if(ret && CookieFilePath != null) SaveCookies();
+            return ret;
+        }
+
+        public void LoadCookies() {
+            if(!File.Exists(CookieFilePath)) return;
+            var uri = new Uri(BASE_URL);
+            CookieContainer container;
+            using (var fs = new FileStream(CookieFilePath, FileMode.Open, FileAccess.Read)) {
+                container = DownloadUtils.DeserializeCookies(fs, uri);
+            }
+            if (container != null) Cookies = container;
+        }
+
+        public void SaveCookies() {
+            var uri = new Uri(BASE_URL);
+            using (var fs = new FileStream(CookieFilePath, FileMode.Create)) {
+                DownloadUtils.SerializeCookies(Cookies.GetCookies(uri), uri, fs);
+            }
         }
     }
 }

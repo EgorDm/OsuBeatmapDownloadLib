@@ -16,6 +16,7 @@ namespace UnitTestProject1
     {
         private const string SONGS_PATH = @"G:\Games\OsuTest\Songs";
         public const string TEMP_PATH = @"G:\Games\OsuTest\LibTempDL";
+        public const string COOKIE_PATH = @"G:\Games\OsuTest\cookies.txt";
 
         [TestMethod]
         public void TestDownloadBloodcat() {
@@ -24,7 +25,7 @@ namespace UnitTestProject1
 
         [TestMethod]
         public void TestDownloadOsu() {
-            TestDownloadOne(new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD));
+            TestDownloadOne(new OsuDownloadProvider(UnitTestExperimental.USERNAME, UnitTestExperimental.PASSWORD, COOKIE_PATH));
         }
 
         public void TestDownloadOne(BeatmapDownloadProvider provider) {
