@@ -119,10 +119,11 @@ namespace OsuMapDownload.Models
 
         public virtual void Reset(BeatmapDownloadProvider provider) {
             DownloadProvider = provider;
-            Status = MapsetDownloadStatus.Waiting;
             Error = null;
             Progress = 0;
             Speed = 0;
+            Status = MapsetDownloadStatus.Waiting;
+           
         }
     }
 }
