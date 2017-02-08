@@ -115,8 +115,8 @@ namespace OsuMapDownload.Providers
             var webResponse = (HttpWebResponse) webRequest.GetResponse();
             return !DownloadUtils.ResponseContains(webResponse, NOT_LOGGED_IN_CHECK);
         }
-
-        protected bool Login(string username, string password) {
+        
+        public bool Login(string username, string password) {
             if (username == null || password == null) return false;
             string poststring = $"login=login&password={password}&redirect=%2F&sid=&username={username}";
             var postdata = Encoding.UTF8.GetBytes(poststring);
