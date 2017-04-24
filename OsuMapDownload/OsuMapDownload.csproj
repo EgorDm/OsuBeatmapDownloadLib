@@ -46,8 +46,8 @@
     <Compile Include="Exceptions\DownloadProviderNotReadyException.cs" />
     <Compile Include="Exceptions\MapsetDownloadInterrupedException.cs" />
     <Compile Include="Exceptions\MapsetNotFoundException.cs" />
-    <Compile Include="Models\MapsetDownload.cs" />
-    <Compile Include="Models\MapsetExtractDownload.cs" />
+    <Compile Include="Models\MapSetDownload.cs" />
+    <Compile Include="Models\MapSetExtractDownload.cs" />
     <Compile Include="Providers\B1oodcatDownloadProvider.cs" />
     <Compile Include="Providers\BeatmapDownloadProvider.cs" />
     <Compile Include="Bloodcat.cs" />
