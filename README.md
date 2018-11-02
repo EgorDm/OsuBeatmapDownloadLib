@@ -1,3 +1,5 @@
+# Deprecated PLS dont use
+
 # OsuBeatmapDownloadLib
 A library which allows you to download osu beatmaps and extract them into songs folder.
 
